@@ -2,12 +2,60 @@ import socket
 import sys
 
 
-class OverloadException(Exception):
-    def __init__(self, message):
-        self.message = message
+class SshClient:
+    def __init__(self):
+        self.MAX_RECEIVE = 4096
+        self.socket = socket.socket()
+        self.socket.settimeout(3)
+        self.seqno = 0
+        self.ackno = 0
 
-    def __str__(self):
-        return repr(self.message)
+    def connect(self, address, port):
+        try:
+            self.socket.connect((address, port))
+            mess = self.socket.recv(self.MAX_RECEIVE)
+            if mess[0] == 0:
+                sys.stderr.write(mess[1:].decode())
+                exit(1)
+            else:
+                sys.stdout.write(mess[1:].decode())
+
+        except socket.error:
+            sys.stderr.write('Unable to locate MySsh server!')
+            exit(1)
+
+    def request(self, command, seqno, count=0):
+        try:
+            if count == 3:
+                raise socket.error
+
+            self.socket.send(bytes([seqno]) + command.encode())
+            while True:
+                res = self.socket.recv(self.MAX_RECEIVE)
+                if res[0] == (self.ackno + 1) % 256:
+                    self.ackno = (self.ackno + 1) % 256
+                    sys.stdout.write(res[1:].decode())
+                    break
+
+        except socket.timeout as e1:
+            self.request(command, seqno, count + 1)
+
+        except socket.error as e2:
+            sys.stderr.write('Server currently unavailable!')
+            exit(1)
+
+        except ConnectionAbortedError as e3:
+            exit(0)
+
+    def communicate(self):
+        while True:
+            cmd = input('$ ')
+            if cmd == '':
+                continue
+            self.seqno = (self.seqno + 1) % 256
+            self.request(cmd, self.seqno)
+            if cmd == 'quit':
+                break
 
 
 if __name__ == '__main__':
@@ -21,32 +69,10 @@ if __name__ == '__main__':
         if len(sys.argv) > 2:
             port = int(sys.argv[2])
 
-        s = socket.socket()
-        s.settimeout(5)
-        s.connect((host, port))
-
-        greeting = s.recv(4096).decode()
-
-        if greeting == "Server overload!!!":
-            raise OverloadException("Server overload!!!")
-
-        sys.stdout.write(greeting + '\n')
-
-        while True:
-            inp = ""
-            while inp == "":
-                inp = input("$ ")
-            s.send(inp.encode())
-            sys.stdout.write(s.recv(4096).decode() + '\n')
+        client = SshClient()
+        client.connect(host, port)
+        client.communicate()
 
     except ValueError:
         sys.stderr.write("Error: Port number must be an integer!!")
-        sys.exit(1)
-
-    except TimeoutError:
-        sys.stderr.write("Time out!!")
-        sys.exit(1)
-
-    except OverloadException as e:
-        sys.stdout.write(e.message)
         sys.exit(1)

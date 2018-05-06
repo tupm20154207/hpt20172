@@ -20,7 +20,7 @@ class ArgumentParser(argparse.ArgumentParser):
         raise ParseError(usage + mess)
 
 
-class MyParser:
+class CommandParser:
 
     def __init__(self):
         self.cd = ArgumentParser(
@@ -45,7 +45,7 @@ class MyParser:
         )
         self.help = ArgumentParser(
             prog="help",
-            description="Provides Help information for MySSH commands.",
+            description=" Display help information for MySSH commands.",
             add_help=False
         )
         self.ls = ArgumentParser(

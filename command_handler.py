@@ -1,6 +1,5 @@
 import os
 import user
-import command_parser
 import subprocess
 
 
@@ -26,15 +25,15 @@ class CommandHandler:
                 if self.user_ins is not None:
                     res = "You must log out first.\n"
                 else:
-                    res = getattr(self, cmd)(args) +"\n"
+                    res = getattr(self, cmd)(args) + "\n"
 
-            elif cmd != 'help' and self.user_ins is None:
+            elif cmd != 'help' and cmd != 'quit' and self.user_ins is None:
                 res = "You must login first.\n"
 
             else:
                 res = getattr(self, cmd)(args) + "\n"
 
-        return res
+        return res + '\n'
 
     def _exists(self, src, dst):
         """Check if src file or directory exists in dst location.
@@ -97,12 +96,19 @@ class CommandHandler:
         return abspath
 
     def _get_parent(self, abspath):
+        """Return the parent directory of current path."""
         if abspath == os.path.abspath(self.user_ins.root_dir):
             return ""
         return os.sep.join(str(abspath).split(os.sep)[:-1])
 
     def _get_name(self, abspath):
+        """Return the name of current path."""
         return abspath.split(os.sep)[-1]
+
+    def _ispred(self, src, pred):
+        """Return True if pred is a predcessor of src, they must be both
+        absolute"""
+        return src.find(pred) != -1
 
     def login(self, arguments):
         res = ""
@@ -200,7 +206,9 @@ class CommandHandler:
             res = "Service unavailable."
 
         elif os.path.isdir(src):
-            if os.name == 'posix':
+            if dst.find(src) != -1:
+                res = "Cannot copy a directory to its own subdirectory"
+            elif os.name == 'posix':
                 subprocess.Popen(
                     ['cp', '-R', src, dst],
                     shell=True,
@@ -246,7 +254,7 @@ class CommandHandler:
                 ['mkdir'] + valid_dirs,
                 shell=True,
             ).communicate()
-            res = "Success, invalid directories (if any) were discarded"
+            res = "Success, invalid directories (if any) were discarded."
 
         return res
 
@@ -261,10 +269,13 @@ class CommandHandler:
             res = "The system cannot find the path(s) specified."
 
         elif os.path.isfile(dst):
-            res = "The destination path must be a directory"
+            res = "The destination path must be a directory."
 
         elif self._exists(src, dst):
             res = "Access denied: Name conflict occurs."
+
+        elif self.current_dir.find(src) != -1:
+            res = "The source directory is in use."
 
         elif os.name != 'posix' and os.name != 'nt':
             res = "Service unavailable."
@@ -321,10 +332,11 @@ class CommandHandler:
 
         valid_paths = [path for path in abspaths
                        if os.path.exists(path) and
-                       os.path.isdir(path) == isdir]
+                       os.path.isdir(path) == isdir and
+                       self.current_dir.find(path) != -1]
 
         if len(valid_paths) == 0:
-            res = "The system cannot find the path(s) specified."
+            res = "None of those path(s) specified are valid."
 
         elif os.name != 'posix' and os.name != 'nt':
             res = "Service unavailable."
@@ -409,10 +421,11 @@ class CommandHandler:
             for line in out.decode().split('\n')[start:]:
                 if line != '':
                     line = line.split()
-                    d =""
+                    d = ""
                     if line[0][0] == 'd':
                         d = '<DIR>'
-                    arr.append('\t'.join([line[5], line[6][:5], d, line[4], line[8]])+'\n')
+                    arr.append(
+                        '\t'.join([line[5], line[6][:5], d, line[4], line[8]]) + '\n')
 
             res = ''.join(arr)
 
@@ -431,11 +444,10 @@ class CommandHandler:
 
     def quit(self, arguments):
         self.stop = True
-        return self.logout()
+        if self.user_ins is not None:
+            self.logout()
+        return 'See ya!'
 
     def help(self, arguments):
         cmd = arguments["COMMAND"]
         return self.parser.get_help(cmd)
-
-
-

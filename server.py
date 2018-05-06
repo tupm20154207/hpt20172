@@ -3,42 +3,84 @@ import user
 import command_parser
 import command_handler
 
-user.User.load_users()
-print(user.User.users['zxc'].password)
-
 
 class ServerHandler(socketserver.BaseRequestHandler):
     MAX_LENGTH = 1024
     MAX_CLIENT = 5
     NUM_CLIENT = 0
 
-    def handle(self):
-
+    def handle_connect(self):
         # get the socket that connect to the client socket
-        sock = self.request
+        self.socket = self.request
 
         # check if number of clients is max
         if ServerHandler.NUM_CLIENT == ServerHandler.MAX_CLIENT:
-            sock.send("Server overload!!!".encode())
-            sock.close()
-            return
+            self.socket.send(bytes([0]) + "Server overloaded!".encode())
+            self.socket.close()
+            return None
+
         else:
             ServerHandler.NUM_CLIENT += 1
-            sock.send(
-                ("----------------Welcome to MySSH server----------------\n")
-                .encode())
+            self.socket.send(
+                bytes([1]) +
+                ("--------------Welcome to MySSH server-------------\n")
+                .encode()
+            )
 
-        # create user instance to process_command
-        handler = command_handler.CommandHandler(
+        # create user instance to process commands
+        self.handler = command_handler.CommandHandler(
             None, command_parser.MyParser())
+        self.ackno = 0
+        self.record = {}
 
-        # listen forever
-        while not handler.stop:
-            res = handler.process_request(sock.recv(self.MAX_LENGTH).decode())
-            sock.send(res.encode())
+    def get_request(self):
+        req = self.socket.recv(self.MAX_LENGTH)
+        return req[0], req[1:].decode()
 
-        # close socket
-        sock.close()
+    def do_operation(self, command):
+        self.ackno = (self.ackno + 1) % 256
+
+        res = self.handler.process_request(command)
+
+        # Flush all records in memory when it's full
+        if self.ackno == 0:
+            self.record.clear()
+
+        # Save result for retransmission
+        self.record[self.ackno] = res
+
+        return res
+
+    def send_reply(self, seqno, command):
+        if seqno == (self.ackno + 1) % 256:
+            res = self.do_operation(command)
+        elif self.record.get(seqno) is not None:
+            res = self.record.get(seqno)
+        else:
+            res = 'Failed to process current request!'
+
+        self.socket.send(bytes([seqno]) + res.encode())
+
+    def handle(self):
+
+        try:
+            self.handle_connect()
+
+            # listen until client type 'quit'
+            while not self.handler.stop:
+                seqno, cmd = self.get_request()
+                self.send_reply(seqno, cmd)
+
+        except (ConnectionResetError, IndexError):
+            if self.handler.user_ins is not None:
+                self.handler.user_ins.log_out()
+
+        finally:
+            self.socket.close()
 
 
-socketserver.ThreadingTCPServer(("", 12345), ServerHandler).serve_forever()
+if __name__ == '__main__':
+
+    user.User.load_users()
+    socketserver.ThreadingTCPServer(("", 12345), ServerHandler).serve_forever()
+    user.User.store_users()
