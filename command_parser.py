@@ -40,12 +40,12 @@ class CommandParser:
         )
         self.echo = ArgumentParser(
             prog="echo",
-            description="Displays messages",
+            description="Displays messages.",
             add_help=False
         )
         self.help = ArgumentParser(
             prog="help",
-            description=" Display help information for MySSH commands.",
+            description="Display help information for MySSH commands.",
             add_help=False
         )
         self.ls = ArgumentParser(
@@ -71,16 +71,16 @@ class CommandParser:
         )
         self.rm = ArgumentParser(
             prog="rm",
-            description="Removes files or directories",
+            description="Removes files or directories.",
             add_help=False
         )
         self.ren = ArgumentParser(
             prog="ren",
-            description="Renames a file or directory",
+            description="Renames a file or directory.",
             add_help=False)
         self.quit = ArgumentParser(
             prog="quit",
-            description="Quits MySSH program",
+            description="Quits MySSH program.",
             add_help=False
         )
 
@@ -102,41 +102,51 @@ class CommandParser:
             add_help=False
         )
 
-        self.cd.add_argument("DEST")
+        self.cd.add_argument("DEST", help='Destination directory.')
 
-        self.cp.add_argument("SOURCE")
-        self.cp.add_argument("DEST")
+        self.cp.add_argument("SOURCE", help='File/directory to be copied.')
+        self.cp.add_argument("DEST", help='Destination directory.')
         self.cp.add_argument("-d", "--directory",
-                             action='store_true')
+                             action='store_true',
+                             help='Source path is a directory.')
 
-        self.echo.add_argument("TEXT", nargs='*')
-        self.echo.add_argument('-f', '--file')
+        self.echo.add_argument("TEXT", nargs='*', help='Content to be echoed.')
+        self.echo.add_argument('-f', '--file', help='Write TEXT to file.')
 
         self.help.add_argument(
             "COMMAND",
             nargs="?",
             choices=["cd", "cp", "date", "echo", "ls",
                      "mkdir", "mv", "pwd", "rm", "ren"],
+            help='Command to display help information.'
         )
 
-        self.ls.add_argument("PATH", nargs="?", default="")
+        self.ls.add_argument("PATH",
+                             nargs="?",
+                             default="",
+                             help='List all files and directories in' +
+                             'this path.')
 
-        self.mkdir.add_argument("PATH", nargs="+")
+        self.mkdir.add_argument("PATH", nargs="+", help='New directories.')
 
-        self.mv.add_argument("SOURCE")
-        self.mv.add_argument("DEST")
+        self.mv.add_argument("SOURCE", help='Files/directories to be moved.')
+        self.mv.add_argument("DEST", help='Destination directory.')
 
-        self.rm.add_argument("-d", "--directory", action="store_true")
-        self.rm.add_argument("PATH", nargs="+")
+        self.rm.add_argument("-d", "--directory",
+                             action="store_true",
+                             help='PATH is a directory.')
+        self.rm.add_argument("PATH",
+                             nargs="+",
+                             help='Files/directories to be removed.')
 
-        self.ren.add_argument("SOURCE")
-        self.ren.add_argument("NEWNAME")
+        self.ren.add_argument("SOURCE", help='Path to be renamed.')
+        self.ren.add_argument("NEWNAME", help='New name.')
 
-        self.login.add_argument("USERNAME")
-        self.login.add_argument("PASSWORD")
+        self.login.add_argument("USERNAME", help='MySSH username.')
+        self.login.add_argument("PASSWORD", help='Password.')
 
-        self.signup.add_argument("USERNAME")
-        self.signup.add_argument("PASSWORD")
+        self.signup.add_argument("USERNAME", help='MySSH username.')
+        self.signup.add_argument("PASSWORD", help='Password.')
 
     def parse(self, string_command):
         mess = ""
@@ -172,3 +182,7 @@ class CommandParser:
             return res
 
         return getattr(self, command).format_help()
+
+
+if __name__ == '__main__':
+    parser = CommandParser()

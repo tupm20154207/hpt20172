@@ -3,6 +3,7 @@ import user
 import command_parser
 import command_handler
 import sys
+import time
 
 
 class OverloadException(Exception):
@@ -15,7 +16,7 @@ class OverloadException(Exception):
 
 class ServerHandler(socketserver.BaseRequestHandler):
     MAX_LENGTH = 1024
-    MAX_CLIENT = 5
+    MAX_CLIENT = 2
     NUM_CLIENT = 0
 
     def handle_connect(self):
@@ -77,6 +78,7 @@ class ServerHandler(socketserver.BaseRequestHandler):
             # listen until client type 'quit'
             while not self.handler.stop:
                 seqno, cmd = self.get_request()
+                # time.sleep(6)
                 self.send_reply(seqno, cmd)
 
             ServerHandler.NUM_CLIENT -= 1

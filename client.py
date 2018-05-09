@@ -38,6 +38,8 @@ class SshClient:
                     break
 
         except socket.timeout as e1:
+            sys.stderr.write(
+                'Retransmit:\n Seq#:{0}\nMessage:{1}\n'.format(seqno, command))
             self.request(command, seqno, count + 1)
 
         except socket.error as e2:

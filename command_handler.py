@@ -1,6 +1,7 @@
 import os
 import user
 import subprocess
+import command_parser
 
 
 class CommandHandler:
@@ -333,7 +334,7 @@ class CommandHandler:
         valid_paths = [path for path in abspaths
                        if os.path.exists(path) and
                        os.path.isdir(path) == isdir and
-                       self.current_dir.find(path) != -1]
+                       self.current_dir.find(path) == -1]
 
         if len(valid_paths) == 0:
             res = "None of those path(s) specified are valid."
@@ -389,7 +390,7 @@ class CommandHandler:
 
         else:
             subprocess.Popen(
-                ['echo', '>', file],
+                ['echo', text, '>', file],
                 shell=True,
             ).communicate()
 
@@ -451,3 +452,10 @@ class CommandHandler:
     def help(self, arguments):
         cmd = arguments["COMMAND"]
         return self.parser.get_help(cmd)
+
+
+if __name__ == '__main__':
+    user.User.load_users()
+    handler = CommandHandler(None, command_parser.CommandParser())
+    handler.login({'USERNAME': 'tu', 'PASSWORD': 'zxc'})
+    print(handler.current_dir)
