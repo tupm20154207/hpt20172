@@ -445,7 +445,7 @@ class CommandHandler:
     def quit(self, arguments):
         self.stop = True
         if self.user_ins is not None:
-            self.logout()
+            self.logout("")
         return 'See ya!'
 
     def help(self, arguments):

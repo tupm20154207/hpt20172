@@ -2,6 +2,15 @@ import socketserver
 import user
 import command_parser
 import command_handler
+import sys
+
+
+class OverloadException(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
 
 
 class ServerHandler(socketserver.BaseRequestHandler):
@@ -16,8 +25,7 @@ class ServerHandler(socketserver.BaseRequestHandler):
         # check if number of clients is max
         if ServerHandler.NUM_CLIENT == ServerHandler.MAX_CLIENT:
             self.socket.send(bytes([0]) + "Server overloaded!".encode())
-            self.socket.close()
-            return None
+            raise OverloadException()
 
         else:
             ServerHandler.NUM_CLIENT += 1
@@ -29,7 +37,7 @@ class ServerHandler(socketserver.BaseRequestHandler):
 
         # create user instance to process commands
         self.handler = command_handler.CommandHandler(
-            None, command_parser.MyParser())
+            None, command_parser.CommandParser())
         self.ackno = 0
         self.record = {}
 
@@ -71,16 +79,36 @@ class ServerHandler(socketserver.BaseRequestHandler):
                 seqno, cmd = self.get_request()
                 self.send_reply(seqno, cmd)
 
+            ServerHandler.NUM_CLIENT -= 1
+
         except (ConnectionResetError, IndexError):
             if self.handler.user_ins is not None:
                 self.handler.user_ins.log_out()
+
+            ServerHandler.NUM_CLIENT -= 1
+
+        except OverloadException:
+            pass
 
         finally:
             self.socket.close()
 
 
 if __name__ == '__main__':
+    host = ""
+    port = 12345
 
-    user.User.load_users()
-    socketserver.ThreadingTCPServer(("", 12345), ServerHandler).serve_forever()
-    user.User.store_users()
+    try:
+        if len(sys.argv) > 1:
+            host = sys.argv[1]
+        if len(sys.argv) > 2:
+            port = int(sys.argv[2])
+
+        user.User.load_users()
+        socketserver.ThreadingTCPServer(
+            (host, port), ServerHandler).serve_forever()
+        user.User.store_users()
+
+    except ValueError:
+        sys.stderr.write("Error: Port number must be an integer!!")
+        sys.exit(1)

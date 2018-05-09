@@ -50,7 +50,7 @@ class SshClient:
     def communicate(self):
         while True:
             cmd = input('$ ')
-            if cmd == '':
+            if cmd.strip() == '':
                 continue
             self.seqno = (self.seqno + 1) % 256
             self.request(cmd, self.seqno)
