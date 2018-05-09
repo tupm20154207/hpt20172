@@ -112,6 +112,7 @@ class CommandHandler:
         return src.find(pred) != -1
 
     def login(self, arguments):
+
         res = ""
         username = arguments["USERNAME"]
         password = arguments["PASSWORD"]
@@ -123,14 +124,17 @@ class CommandHandler:
         return res
 
     def signup(self, arguments):
+
         res = ""
         username = arguments["USERNAME"]
         password = arguments["PASSWORD"]
-        self.set_user(user.User.sign_up(username, password))
-        if self.user_ins is None:
-            res = "Sign up failed!"
-        else:
+        signup_res = user.User.sign_up(username, password)
+
+        if signup_res:
             res = "Sign up success!"
+        else:
+            res = "Sign up failed!"
+
         return res
 
     def logout(self, arguments):

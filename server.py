@@ -3,11 +3,12 @@ import user
 import command_parser
 import command_handler
 import sys
+import socket
 import time
 
 
 class OverloadException(Exception):
-    def __init__(self, message):
+    def __init__(self, message=""):
         self.message = message
 
     def __str__(self):
@@ -16,25 +17,18 @@ class OverloadException(Exception):
 
 class ServerHandler(socketserver.BaseRequestHandler):
     MAX_LENGTH = 1024
-    MAX_CLIENT = 2
-    NUM_CLIENT = 0
 
     def handle_connect(self):
         # get the socket that connect to the client socket
         self.socket = self.request
+        self.socket.settimeout(99)
 
-        # check if number of clients is max
-        if ServerHandler.NUM_CLIENT == ServerHandler.MAX_CLIENT:
-            self.socket.send(bytes([0]) + "Server overloaded!".encode())
-            raise OverloadException()
+        # send greetings
 
-        else:
-            ServerHandler.NUM_CLIENT += 1
-            self.socket.send(
-                bytes([1]) +
-                ("--------------Welcome to MySSH server-------------\n")
-                .encode()
-            )
+        self.socket.send(
+            ("--------------Welcome to MySSH server-------------\n")
+            .encode()
+        )
 
         # create user instance to process commands
         self.handler = command_handler.CommandHandler(
@@ -78,16 +72,16 @@ class ServerHandler(socketserver.BaseRequestHandler):
             # listen until client type 'quit'
             while not self.handler.stop:
                 seqno, cmd = self.get_request()
-                # time.sleep(6)
+                # time.sleep(12)
                 self.send_reply(seqno, cmd)
 
-            ServerHandler.NUM_CLIENT -= 1
+        except (ConnectionResetError,
+                IndexError,
+                ConnectionAbortedError,
+                socket.timeout):
 
-        except (ConnectionResetError, IndexError):
             if self.handler.user_ins is not None:
                 self.handler.user_ins.log_out()
-
-            ServerHandler.NUM_CLIENT -= 1
 
         except OverloadException:
             pass

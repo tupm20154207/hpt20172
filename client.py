@@ -14,13 +14,10 @@ class SshClient:
         try:
             self.socket.connect((address, port))
             mess = self.socket.recv(self.MAX_RECEIVE)
-            if mess[0] == 0:
-                sys.stderr.write(mess[1:].decode())
-                exit(1)
-            else:
-                sys.stdout.write(mess[1:].decode())
+            sys.stdout.write(mess.decode())
 
         except socket.error:
+            sys.stderr.flush()
             sys.stderr.write('Unable to locate MySsh server!')
             exit(1)
 
@@ -34,15 +31,17 @@ class SshClient:
                 res = self.socket.recv(self.MAX_RECEIVE)
                 if res[0] == (self.ackno + 1) % 256:
                     self.ackno = (self.ackno + 1) % 256
-                    sys.stdout.write(res[1:].decode())
+                    sys.stdout.write(res[1:].decode('ascii'))
                     break
 
         except socket.timeout as e1:
+            sys.stderr.flush()
             sys.stderr.write(
-                'Retransmit:\n Seq#:{0}\nMessage:{1}\n'.format(seqno, command))
+                'Retransmit:\nSeq#:{0}\nMessage:{1}\n'.format(seqno, command))
             self.request(command, seqno, count + 1)
 
         except socket.error as e2:
+            sys.stderr.flush()
             sys.stderr.write('Server currently unavailable!')
             exit(1)
 
@@ -76,5 +75,6 @@ if __name__ == '__main__':
         client.communicate()
 
     except ValueError:
+        sys.stderr.flush()
         sys.stderr.write("Error: Port number must be an integer!!")
         sys.exit(1)
